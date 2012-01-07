@@ -15,7 +15,7 @@
 
 有使用 12306自动登录 和 12306自动查询 的同学可在[插件管理](chrome://settings/extensions) 里面卸载了，因为功能重复了
 
-使用谷歌浏览器 [点击这里](), 然后确认安装userscript
+使用谷歌浏览器 [点击这里](https://github.com/zzdhidden/12306/raw/master/12306BookingAssistant.user.js), 然后确认安装userscript
 
 安装成功后 [点击这里](https://dynamic.12306.cn/otsweb/) 开始订票吧
 
