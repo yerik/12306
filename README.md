@@ -13,12 +13,19 @@
 使用
 ------------
 
-有使用 12306自动登录 和 12306自动查询 的同学可在[插件管理](chrome://settings/extensions) 里面卸载了，因为功能重复了
+有使用 12306自动登录 和 12306自动查询 的同学可在 插件管理(chrome://settings/extensions) 里面卸载了，因为功能重复了
 
-使用谷歌浏览器 [点击这里](https://github.com/zzdhidden/12306/raw/master/12306BookingAssistant.user.js), 然后确认安装userscript
+使用谷歌浏览器 [点击这里](https://github.com/zzdhidden/12306/raw/master/12306BookingAssistant.user.js), 然后确认安装此userscript
 
 安装成功后 [点击这里](https://dynamic.12306.cn/otsweb/) 开始订票吧
 
+首先输入好登录名，密码，和验证码。 点击自动登录，即可进行多次尝试登录，直至登录成功
+
+![登录](https://github.com/zzdhidden/12306/raw/master/login.jpg)
+
+登录之后到车票预订页面，选择好出发地，目的地，和出发时间，点击开始刷票，就会不断更新火车票，只到有票为止，刷到之后会有通知提示和声音提示
+
+![查询](https://github.com/zzdhidden/12306/raw/master/query.jpg)
 
 那些贡献者们....
 ------------
