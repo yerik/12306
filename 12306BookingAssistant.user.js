@@ -1,39 +1,40 @@
 /*
-  12306 Auto Query => A javascript snippet to help you book tickets online.
-  12306 Booking Assistant
-  Copyright (C) 2011 Hidden
- 
-  12306 Auto Query => A javascript snippet to help you book tickets online.
-  Copyright (C) 2011 Jingqin Lynn
- 
-  12306 Auto Login => A javascript snippet to help you auto login 12306.com.
-  Copyright (C) 2011 Kevintop
-  
-  Includes jQuery
-  Copyright 2011, John Resig
-  Dual licensed under the MIT or GPL Version 2 licenses.
-  http://jquery.org/license
-  
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-  
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-  
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
+ *  12306 Auto Query => A javascript snippet to help you book tickets online.
+ *  12306 Booking Assistant
+ *  Copyright (C) 2011 Hidden
+ * 
+ *  12306 Auto Query => A javascript snippet to help you book tickets online.
+ *  Copyright (C) 2011 Jingqin Lynn
+ * 
+ *  12306 Auto Login => A javascript snippet to help you auto login 12306.com.
+ *  Copyright (C) 2011 Kevintop
+ * 
+ *  Includes jQuery
+ *  Copyright 2011, John Resig
+ *  Dual licensed under the MIT or GPL Version 2 licenses.
+ *  http://jquery.org/license
+ * 
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ * 
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
  */
 
 // ==UserScript==  
 // @name         12306 Booking Assistant
+// @version		 1.1
 // @author       zzdhidden@gmail.com
 // @namespace    https://github.com/zzdhidden
-// @description  A javascript snippet to help you booking train tickets at 12306.com
+// @description  12306 订票助手之(自动登录，自动查票)
 // @include      *://dynamic.12306.cn/otsweb/loginAction.do*
 // @include		 *://dynamic.12306.cn/otsweb/order/querySingleAction.do*
 // @require	https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js
@@ -68,15 +69,14 @@ function withjQuery(callback, safe){
 	}
 }
 
-
 withjQuery(function($){
 	$(document).click(function() {
 		if( window.webkitNotifications && window.webkitNotifications.checkPermission() != 0) {
 			window.webkitNotifications.requestPermission();
 		}
 	});
-	var notify = function(str, timeout) {
-		if( window.webkitNotifications && window.webkitNotifications.checkPermission() == 0) {
+	function notify(str, timeout, skipAlert) {
+		if( window.webkitNotifications && window.webkitNotifications.checkPermission() == 0 ) {
 			var notification = webkitNotifications.createNotification(
 				null,  // icon url - can be relative
 				'订票',  // notification title
@@ -88,8 +88,12 @@ withjQuery(function($){
 					notification.cancel();
 				}, timeout);
 			}
+			return true;
 		} else {
-			alert( str );
+			if( !skipAlert ) {
+				alert( str );
+			}
+			return false;
 		}
 	}
 	if( window.location.href.indexOf("querySingleAction.do") != -1 ) {
@@ -98,7 +102,7 @@ withjQuery(function($){
 
 		//The table for displaying tickets
 		var tbl = $(".obj")[0];
-
+		// Not work on IE
 		tbl.addEventListener("DOMNodeInserted", function() {
 			if(checkTickets(event.target))
 				{
@@ -171,13 +175,15 @@ withjQuery(function($){
 		var audio = null;
 
 		var onticketAvailable = function() {
-			notify("可以订票了！");
 			if(window.Audio) {
 				if(!audio) {
 					audio = new Audio("http://www.w3school.com.cn/i/song.ogg");
 					audio.loop = true;
 				}
 				audio.play();
+				notify("可以订票了！", null, true);
+			} else {
+				notify("可以订票了！");
 			}
 		}
 		var highLightRow = function(row) {
@@ -193,31 +199,54 @@ withjQuery(function($){
 		var isStudentTicket = false;
 
 		//Control panel UI
-		$("<div>请先选择好出发地，目的地，和出发时间。&nbsp;&nbsp;&nbsp;</div>").append(
-			$("<input/>").attr("type", "checkBox").change(function(){
-				isStudentTicket = this.checked;
-			})
-		).append(
-			$("<span/>").html("学生票&nbsp;&nbsp;")
-		).append(
-			$("<button style='padding: 5px 10px; background: #2CC03E;border-color: #259A33;border-right-color: #2CC03E;border-bottom-color:#2CC03E;color: white;border-radius: 5px;text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.2);'/>").attr("id", "refreshButton").html("自动刷票").click(function() {
-				if(!isAutoQueryEnabled) {
-					isTicketAvailable = false;
-					if(audio && !audio.paused) audio.pause();
-					isAutoQueryEnabled = true;
-					doQuery();
-					this.innerText="停止刷票";
-				}
-				else {
-					isAutoQueryEnabled = false;
-					this.innerText="开始刷票";
-				}
-			})
-		).append(
-			$("<span>").html("&nbsp;&nbsp;尝试次数：").append(
-				$("<span/>").attr("id", "refreshTimes").text("0")
+		var ui = $("<div>请先选择好出发地，目的地，和出发时间。&nbsp;&nbsp;&nbsp;</div>")
+			.append(
+				$("<input id='isStudentTicket' type='checkbox' />").change(function(){
+					isStudentTicket = this.checked;
+				})
 			)
-		).insertBefore($(".cx_title_w:first"));
+			.append(
+				$("<label for='isStudentTicket'></label>").html("学生票&nbsp;&nbsp;")
+			)
+			.append(
+				$("<button style='padding: 5px 10px; background: #2CC03E;border-color: #259A33;border-right-color: #2CC03E;border-bottom-color:#2CC03E;color: white;border-radius: 5px;text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.2);'/>").attr("id", "refreshButton").html("开始刷票").click(function() {
+					if(!isAutoQueryEnabled) {
+						isTicketAvailable = false;
+						if(audio && !audio.paused) audio.pause();
+						isAutoQueryEnabled = true;
+						doQuery();
+						this.innerText="停止刷票";
+					}
+					else {
+						isAutoQueryEnabled = false;
+						this.innerText="开始刷票";
+					}
+				})
+			)
+			.append(
+				$("<span>").html("&nbsp;&nbsp;尝试次数：").append(
+					$("<span/>").attr("id", "refreshTimes").text("0")
+				)
+			)
+			.append( 
+				//Custom ticket type
+				$("<div>如果只需要刷特定的票种，请在余票信息下面勾选。</div>")
+					.append($("<a href='#' style='color: blue;'>只勾选坐票&nbsp;&nbsp;</a>").click(function() {
+						$(".hdr tr:eq(2) td").each(function(i,e) {
+							$(this).find("input").attr("checked", $(this).text().indexOf("座") != -1 ).change();
+						});
+						return false;
+					}))
+					.append($("<a href='#' style='color: blue;'>只勾选卧铺&nbsp;&nbsp;</a>").click(function() {
+						$(".hdr tr:eq(2) td").each(function(i,e) {
+							$(this).find("input").attr("checked", $(this).text().indexOf("卧") != -1 ).change();
+						});
+						return false;
+					}))
+			);
+		var container = $(".cx_title_w:first");
+		container.length ?
+			ui.insertBefore(container) : ui.appendTo(document.body);
 
 		//Ticket type selector & UI
 		var ticketType = new Array();
@@ -226,17 +255,28 @@ withjQuery(function($){
 			if(i<3) return;
 			ticketType[i] = true;
 
-			var c = $("<input/>").attr("type", "checkBox").attr("checked", "true");
+			var c = $("<input/>").attr("type", "checkBox").attr("checked", true);
 			c[0].ticketTypeId = i;
 			c.change(function() {
 				ticketType[this.ticketTypeId] = this.checked;
+				console.log( this );
 			}).appendTo(e);
 		});
+		
 	}
 	else if( window.location.href.indexOf("loginAction.do") != -1 ) {
 		//login
 		var url = "https://dynamic.12306.cn/otsweb/loginAction.do?method=login";
 		var queryurl = "https://dynamic.12306.cn/otsweb/order/querySingleAction.do?method=init";
+		//Check had login, redirect to query url
+		if( parent && parent.$ ) {
+			var str = parent.$("#username_ a").attr("href");
+			if( str && str.indexOf("sysuser/user_info") != -1 ){
+				window.location.href = queryurl;
+				return;
+			}
+		}
+
 		function submitForm(){
 			var submitUrl = url;
 			$.ajax({
@@ -259,7 +299,7 @@ withjQuery(function($){
 					}
 					else {
 						notify('登录成功，开始查询车票吧！');
-						location.replace(queryurl);
+						window.location.href = queryurl;
 					};
 				},
 				error: function(msg){
